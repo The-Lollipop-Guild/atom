@@ -25,5 +25,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - run: export ATOM_DEV_RESOURCE_PATH=~/atom
     - run: ./script/build
     - run: ./script/test
