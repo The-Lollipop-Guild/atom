@@ -12,6 +12,7 @@ const { EventEmitter } = require('events');
 const StartupTime = require('../startup-time');
 
 const ICON_PATH = path.resolve(__dirname, '..', '..', 'resources', 'atom.png');
+const SPLASH_PATH = path.resolve(__dirname, '..', '..', 'resources', 'splash.png')
 
 let includeShellLoadTime = true;
 let nextId = 0;
@@ -19,6 +20,17 @@ let nextId = 0;
 module.exports = class AtomWindow extends EventEmitter {
   constructor(atomApplication, fileRecoveryService, settings = {}) {
     StartupTime.addMarker('main-process:atom-window:start');
+    const BrowserWindowConstructor =
+      settings.browserWindowConstructor || BrowserWindow;
+    const splash = new BrowserWindowConstructor({
+      width: 963,
+      height: 543,
+      alwaysOnTop: true,
+      frame: false,
+      transparent: true
+    });
+    splash.loadURL('file://' + SPLASH_PATH);
+    splash.show();
 
     super();
 
@@ -74,8 +86,6 @@ module.exports = class AtomWindow extends EventEmitter {
       options.titleBarStyle = 'hiddenInset';
     if (this.shouldHideTitleBar()) options.frame = false;
 
-    const BrowserWindowConstructor =
-      settings.browserWindowConstructor || BrowserWindow;
     this.browserWindow = new BrowserWindowConstructor(options);
 
     Object.defineProperty(this.browserWindow, 'loadSettingsJSON', {
@@ -110,7 +120,6 @@ module.exports = class AtomWindow extends EventEmitter {
       location => location.pathToOpen && !location.isDirectory
     );
     this.loadSettings.initialProjectRoots = this.projectRoots;
-
     StartupTime.addMarker('main-process:atom-window:end');
 
     // Expose the startup markers to the renderer process, so we can have unified
@@ -139,6 +148,7 @@ module.exports = class AtomWindow extends EventEmitter {
 
     this.browserWindow.on('window:loaded', () => {
       this.disableZoom();
+      splash.destroy();
       this.emit('window:loaded');
       this.resolveLoadedPromise();
     });

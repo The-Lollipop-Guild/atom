@@ -505,6 +505,9 @@ class StubBrowserWindow extends EventEmitter {
     super();
     this.options = options;
     this.sent = [];
+    // this.shown = false;
+    // this.show = this.show.bind(this);
+    // this.destroy = this.destroy.bind(this);
     this.behavior = {
       focusOnWebView: false
     };
@@ -517,6 +520,14 @@ class StubBrowserWindow extends EventEmitter {
   }
 
   loadURL() {}
+
+  // show() {
+  //   this.shown = true;
+  // }
+
+  // destroy() {
+  //   this.shown = false;
+  // }
 
   focusOnWebView() {
     this.behavior.focusOnWebView = true;
