@@ -33,7 +33,7 @@ module.exports = class AtomWindow extends EventEmitter {
     splash.show();
 
     super();
-
+	this.splash = splash;
     this.id = nextId++;
     this.atomApplication = atomApplication;
     this.fileRecoveryService = fileRecoveryService;
