@@ -182,6 +182,13 @@ describe('AtomWindow', function() {
         assert.isUndefined(w1.options.frame);
       });
     }
+	
+	it('shows the splash screen', async function() {
+		const w = new AtomWindow(app, service, {
+			browserWindowConstructor: StubBrowserWindow
+		});
+		assert.isTrue(w.splash.shown);
+	});
 
     it('opens initial locations', async function() {
       const locationsToOpen = [
@@ -505,6 +512,9 @@ class StubBrowserWindow extends EventEmitter {
     super();
     this.options = options;
     this.sent = [];
+    this.shown = false;
+    this.show = this.show.bind(this);
+    this.destroy = this.destroy.bind(this);
     this.behavior = {
       focusOnWebView: false
     };
@@ -517,6 +527,14 @@ class StubBrowserWindow extends EventEmitter {
   }
 
   loadURL() {}
+
+  show() {
+    this.shown = true;
+  }
+
+  destroy() {
+    this.shown = false;
+  }
 
   focusOnWebView() {
     this.behavior.focusOnWebView = true;

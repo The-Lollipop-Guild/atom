@@ -1,4 +1,10 @@
-const { BrowserWindow, app, dialog, ipcMain } = require('electron');
+const {
+  BrowserWindow,
+  app,
+  dialog,
+  ipcMain,
+  nativeImage
+} = require('electron');
 const getAppName = require('../get-app-name');
 const path = require('path');
 const url = require('url');
@@ -6,6 +12,7 @@ const { EventEmitter } = require('events');
 const StartupTime = require('../startup-time');
 
 const ICON_PATH = path.resolve(__dirname, '..', '..', 'resources', 'atom.png');
+const SPLASH_PATH = path.resolve(__dirname, '..', '..', 'resources', 'splash.png')
 
 let includeShellLoadTime = true;
 let nextId = 0;
@@ -13,9 +20,20 @@ let nextId = 0;
 module.exports = class AtomWindow extends EventEmitter {
   constructor(atomApplication, fileRecoveryService, settings = {}) {
     StartupTime.addMarker('main-process:atom-window:start');
+    const BrowserWindowConstructor =
+      settings.browserWindowConstructor || BrowserWindow;
+    const splash = new BrowserWindowConstructor({
+      width: 963,
+      height: 543,
+      alwaysOnTop: true,
+      frame: false,
+      transparent: true
+    });
+    splash.loadURL('file://' + SPLASH_PATH);
+    splash.show();
 
     super();
-
+	this.splash = splash;
     this.id = nextId++;
     this.atomApplication = atomApplication;
     this.fileRecoveryService = fileRecoveryService;
@@ -51,6 +69,8 @@ module.exports = class AtomWindow extends EventEmitter {
         nodeIntegration: true,
         webviewTag: true,
 
+        // TodoElectronIssue: remote module is deprecated https://www.electronjs.org/docs/breaking-changes#default-changed-enableremotemodule-defaults-to-false
+        enableRemoteModule: true,
         // node support in threads
         nodeIntegrationInWorker: true
       },
@@ -59,14 +79,13 @@ module.exports = class AtomWindow extends EventEmitter {
 
     // Don't set icon on Windows so the exe's ico will be used as window and
     // taskbar's icon. See https://github.com/atom/atom/issues/4811 for more.
-    if (process.platform === 'linux') options.icon = ICON_PATH;
+    if (process.platform === 'linux')
+      options.icon = nativeImage.createFromPath(ICON_PATH);
     if (this.shouldAddCustomTitleBar()) options.titleBarStyle = 'hidden';
     if (this.shouldAddCustomInsetTitleBar())
       options.titleBarStyle = 'hiddenInset';
     if (this.shouldHideTitleBar()) options.frame = false;
 
-    const BrowserWindowConstructor =
-      settings.browserWindowConstructor || BrowserWindow;
     this.browserWindow = new BrowserWindowConstructor(options);
 
     Object.defineProperty(this.browserWindow, 'loadSettingsJSON', {
@@ -101,7 +120,6 @@ module.exports = class AtomWindow extends EventEmitter {
       location => location.pathToOpen && !location.isDirectory
     );
     this.loadSettings.initialProjectRoots = this.projectRoots;
-
     StartupTime.addMarker('main-process:atom-window:end');
 
     // Expose the startup markers to the renderer process, so we can have unified
@@ -130,6 +148,7 @@ module.exports = class AtomWindow extends EventEmitter {
 
     this.browserWindow.on('window:loaded', () => {
       this.disableZoom();
+      splash.destroy();
       this.emit('window:loaded');
       this.resolveLoadedPromise();
     });
@@ -320,7 +339,19 @@ module.exports = class AtomWindow extends EventEmitter {
   }
 
   replaceEnvironment(env) {
-    this.browserWindow.webContents.send('environment', env);
+    const {
+      NODE_ENV,
+      NODE_PATH,
+      ATOM_HOME,
+      ATOM_DISABLE_SHELLING_OUT_FOR_ENVIRONMENT
+    } = env;
+
+    this.browserWindow.webContents.send('environment', {
+      NODE_ENV,
+      NODE_PATH,
+      ATOM_HOME,
+      ATOM_DISABLE_SHELLING_OUT_FOR_ENVIRONMENT
+    });
   }
 
   sendMessage(message, detail) {
@@ -464,13 +495,13 @@ module.exports = class AtomWindow extends EventEmitter {
       options
     );
 
+    let promise = dialog.showSaveDialog(this.browserWindow, options);
     if (typeof callback === 'function') {
-      // Async
-      dialog.showSaveDialog(this.browserWindow, options, callback);
-    } else {
-      // Sync
-      return dialog.showSaveDialog(this.browserWindow, options);
+      promise = promise.then(({ filePath, bookmark }) => {
+        callback(filePath, bookmark);
+      });
     }
+    return promise;
   }
 
   toggleDevTools() {
