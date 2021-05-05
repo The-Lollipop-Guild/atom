@@ -802,10 +802,11 @@ module.exports = class AtomApplication extends EventEmitter {
     );
 
     this.disposable.add(
-      ipcHelpers.on(ipcMain, 'resolve-proxy', async (event, requestId, url) => {
-        const proxy = await event.sender.session.resolveProxy(url);
-        if (!event.sender.isDestroyed())
-          event.sender.send('did-resolve-proxy', requestId, proxy);
+      ipcHelpers.on(ipcMain, 'resolve-proxy', (event, requestId, url) => {
+        event.sender.session.resolveProxy(url, proxy => {
+          if (!event.sender.isDestroyed())
+            event.sender.send('did-resolve-proxy', requestId, proxy);
+        });
       })
     );
 
@@ -1903,7 +1904,9 @@ module.exports = class AtomApplication extends EventEmitter {
     const normalizedPath = path.normalize(
       path.resolve(executedFrom, fs.normalize(result.pathToOpen))
     );
-    if (!url.parse(pathToOpen).protocol) {
+    if (!url.parse(pathToOpen).protocol || 
+    pathToOpen.slice(url.parse(pathToOpen).protocol.length, url.parse(pathToOpen).protocol.length + 2) != "//") 
+    {
       result.pathToOpen = normalizedPath;
     }
 
@@ -2014,13 +2017,7 @@ module.exports = class AtomApplication extends EventEmitter {
 
     // File dialog defaults to project directory of currently active editor
     if (path) openOptions.defaultPath = path;
-    dialog
-      .showOpenDialog(parentWindow, openOptions)
-      .then(({ filePaths, bookmarks }) => {
-        if (typeof callback === 'function') {
-          callback(filePaths, bookmarks);
-        }
-      });
+    dialog.showOpenDialog(parentWindow, openOptions, callback);
   }
 
   async promptForRestart() {

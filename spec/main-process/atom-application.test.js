@@ -723,8 +723,28 @@ describe('AtomApplication', function() {
       assert.isNull(w._locations[0].initialColumn);
     });
 
+    it('opens a file without a specified directory to a specific line number', async function() {
+      await scenario.open(parseCommandLine(['1.md:10']));
+      await scenario.assert('[_ 1.md]');
+
+      const w = scenario.getWindow(0);
+      assert.lengthOf(w._locations, 1);
+      assert.strictEqual(w._locations[0].initialLine, 9);
+      assert.isNull(w._locations[0].initialColumn);
+    });
+
     it('opens a file to a specific line number and column', async function() {
       await scenario.open(parseCommandLine(['b/2.md:12:5']));
+      await scenario.assert('[_ 2.md]');
+
+      const w = scenario.getWindow(0);
+      assert.lengthOf(w._locations, 1);
+      assert.strictEqual(w._locations[0].initialLine, 11);
+      assert.strictEqual(w._locations[0].initialColumn, 4);
+    });
+
+    it('opens a file without a specifed directory to a specific line number and column', async function() {
+      await scenario.open(parseCommandLine(['2.md:12:5']));
       await scenario.assert('[_ 2.md]');
 
       const w = scenario.getWindow(0);
