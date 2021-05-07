@@ -1903,7 +1903,9 @@ module.exports = class AtomApplication extends EventEmitter {
     const normalizedPath = path.normalize(
       path.resolve(executedFrom, fs.normalize(result.pathToOpen))
     );
-    if (!url.parse(pathToOpen).protocol) {
+    if (!url.parse(pathToOpen).protocol || 
+    pathToOpen.slice(url.parse(pathToOpen).protocol.length, url.parse(pathToOpen).protocol.length + 2) != "//") 
+    {
       result.pathToOpen = normalizedPath;
     }
 
@@ -2015,12 +2017,12 @@ module.exports = class AtomApplication extends EventEmitter {
     // File dialog defaults to project directory of currently active editor
     if (path) openOptions.defaultPath = path;
     dialog
-      .showOpenDialog(parentWindow, openOptions)
-      .then(({ filePaths, bookmarks }) => {
-        if (typeof callback === 'function') {
-          callback(filePaths, bookmarks);
-        }
-      });
+    .showOpenDialog(parentWindow, openOptions)
+    .then(({ filePaths, bookmarks }) => {
+      if (typeof callback === 'function') {
+        callback(filePaths, bookmarks);
+      }
+    });
   }
 
   async promptForRestart() {
